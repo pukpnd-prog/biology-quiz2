@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Spaced Repetition Quiz</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 50px; background: #f4f4f4; }
+        #quiz-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; width: 100%; border-top: 5px solid #00a651; }
+        button { cursor: pointer; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; font-weight: bold; }
+        .btn-blue { background: #2196F3; color: white; }
+        .btn-green { background: #4CAF50; color: white; }
+        .btn-red { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <h2>IGCSE Biology Quiz</h2>
+    <div id="game-area">
+        <p id="question">Loading question...</p>
+        <button class="btn-blue" onclick="showAnswer()">Show Answer</button>
+        
+        <div id="answer-section" style="display:none; margin-top:20px;">
+            <p id="answer" style="background: #eef; padding: 10px; border-radius: 5px;"></p>
+            <p>Did you remember this?</p>
+            <button class="btn-green" onclick="handleInput(true)">Yes, I got it!</button>
+            <button class="btn-red" onclick="handleInput(false)">No, I forgot</button>
+        </div>
+    </div>
+    <p id="status" style="font-size: 12px; color: gray; margin-top: 20px;"></p>
+</div>
+
+<script>
+    // THE DATA: Your biology questions
+    const cardData = {
+        id: "mrs_gren_001",
+        question: "What are the 7 characteristics of living organisms?",
+        answer: "Movement, Respiration, Sensitivity, Growth, Reproduction, Excretion, Nutrition (MRS GREN)"
+    };
+
+    // THE BRAIN: Spaced Repetition Logic
+    function handleInput(isCorrect) {
+        let progress = JSON.parse(localStorage.getItem('quiz_progress')) || {};
+        let current = progress[cardData.id] || { level: 1 };
+
+        if (isCorrect) {
+            current.level = Math.min(current.level + 1, 5);
+        } else {
+            current.level = 1;
+        }
+
+        const intervals = [0, 1, 10, 1440, 7200, 43200]; 
+        current.nextReview = Date.now() + (intervals[current.level] * 60 * 1000);
+        
+        progress[cardData.id] = current;
+        localStorage.setItem('quiz_progress', JSON.stringify(progress));
+
+        alert("Progress Saved! Level: " + current.level);
+        location.reload(); // Refresh to check timing
+    }
+
+    function showAnswer() {
+        document.getElementById('answer-section').style.display = 'block';
+    }
+
+    // Initialize Page
+    document.getElementById('question').innerText = cardData.question;
+    document.getElementById('answer').innerText = cardData.answer;
+</script>
+
+</body>
+</html>
