@@ -2,70 +2,103 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Spaced Repetition Quiz</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biology Spaced Repetition</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; padding: 50px; background: #f4f4f4; }
-        #quiz-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; width: 100%; border-top: 5px solid #00a651; }
-        button { cursor: pointer; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; font-weight: bold; }
-        .btn-blue { background: #2196F3; color: white; }
-        .btn-green { background: #4CAF50; color: white; }
-        .btn-red { background: #f44336; color: white; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        #quiz-card { background: white; width: 100%; max-width: 500px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 8px solid #00a651; text-align: center; }
+        .question-text { font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 20px; min-height: 60px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; margin: 5px; }
+        .btn-primary { background: #2196F3; color: white; width: 100%; }
+        .btn-success { background: #4CAF50; color: white; flex: 1; }
+        .btn-danger { background: #f44336; color: white; flex: 1; }
+        #answer-area { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; }
+        .answer-text { background: #f9f9f9; padding: 15px; border-radius: 8px; color: #555; margin-bottom: 20px; }
+        .button-group { display: flex; justify-content: space-between; }
+        #status-bar { margin-top: 20px; font-size: 0.8rem; color: #888; }
     </style>
 </head>
 <body>
 
-<div id="quiz-container">
-    <h2>IGCSE Biology Quiz</h2>
-    <div id="game-area">
-        <p id="question">Loading question...</p>
-        <button class="btn-blue" onclick="showAnswer()">Show Answer</button>
-        
-        <div id="answer-section" style="display:none; margin-top:20px;">
-            <p id="answer" style="background: #eef; padding: 10px; border-radius: 5px;"></p>
-            <p>Did you remember this?</p>
-            <button class="btn-green" onclick="handleInput(true)">Yes, I got it!</button>
-            <button class="btn-red" onclick="handleInput(false)">No, I forgot</button>
+<div id="quiz-card">
+    <div id="quiz-content">
+        <div class="question-text" id="q-text">Loading your next review...</div>
+        <button class="btn btn-primary" id="show-btn" onclick="showAnswer()">Show Answer</button>
+
+        <div id="answer-area">
+            <div class="answer-text" id="a-text"></div>
+            <p>Did you know this?</p>
+            <div class="button-group">
+                <button class="btn btn-danger" onclick="submitResult(false)">Forgot</button>
+                <button class="btn btn-success" onclick="submitResult(true)">Got it!</button>
+            </div>
         </div>
     </div>
-    <p id="status" style="font-size: 12px; color: gray; margin-top: 20px;"></p>
+    <div id="status-bar"></div>
 </div>
 
 <script>
-    // THE DATA: Your biology questions
-    const cardData = {
-        id: "mrs_gren_001",
-        question: "What are the 7 characteristics of living organisms?",
-        answer: "Movement, Respiration, Sensitivity, Growth, Reproduction, Excretion, Nutrition (MRS GREN)"
-    };
+    // 1. DATA: Add your Biology questions here
+    const questions = [
+        { id: 'b1', q: "What is 'Movement' in living things?", a: "An action by an organism causing a change of position or place." },
+        { id: 'b2', q: "Define 'Respiration'.", a: "Chemical reactions in cells that break down nutrient molecules to release energy." },
+        { id: 'b3', q: "What is 'Sensitivity'?", a: "The ability to detect and respond to changes in the environment." },
+        { id: 'b4', q: "Define 'Excretion'.", a: "Removal from organisms of toxic materials and substances in excess of requirements." },
+        { id: 'b5', q: "What is 'Nutrition'?", a: "Taking in of materials for energy, growth, and development." }
+    ];
 
-    // THE BRAIN: Spaced Repetition Logic
-    function handleInput(isCorrect) {
-        let progress = JSON.parse(localStorage.getItem('quiz_progress')) || {};
-        let current = progress[cardData.id] || { level: 1 };
+    let currentCard = null;
 
-        if (isCorrect) {
-            current.level = Math.min(current.level + 1, 5);
-        } else {
-            current.level = 1;
+    // 2. LOGIC: Find which card is due for review
+    function getNextCard() {
+        const progress = JSON.parse(localStorage.getItem('bio_prog')) || {};
+        const now = Date.now();
+
+        // Filter for cards that are new OR due now
+        const dueCards = questions.filter(q => {
+            if (!progress[q.id]) return true; // New card
+            return progress[q.id].nextReview <= now; // Due card
+        });
+
+        if (dueCards.length === 0) {
+            document.getElementById('quiz-content').innerHTML = "🎉 <h3>All caught up!</h3><p>Come back later for your next scheduled review.</p>";
+            return;
         }
 
-        const intervals = [0, 1, 10, 1440, 7200, 43200]; 
-        current.nextReview = Date.now() + (intervals[current.level] * 60 * 1000);
-        
-        progress[cardData.id] = current;
-        localStorage.setItem('quiz_progress', JSON.stringify(progress));
-
-        alert("Progress Saved! Level: " + current.level);
-        location.reload(); // Refresh to check timing
+        currentCard = dueCards[0];
+        document.getElementById('q-text').innerText = currentCard.q;
+        document.getElementById('a-text').innerText = currentCard.a;
     }
 
     function showAnswer() {
-        document.getElementById('answer-section').style.display = 'block';
+        document.getElementById('answer-area').style.display = 'block';
+        document.getElementById('show-btn').style.display = 'none';
     }
 
-    // Initialize Page
-    document.getElementById('question').innerText = cardData.question;
-    document.getElementById('answer').innerText = cardData.answer;
+    function submitResult(isCorrect) {
+        let progress = JSON.parse(localStorage.getItem('bio_prog')) || {};
+        let p = progress[currentCard.id] || { level: 0 };
+
+        if (isCorrect) {
+            p.level = Math.min(p.level + 1, 5);
+        } else {
+            p.level = 1;
+        }
+
+        // Intervals: New, 1m, 10m, 1day, 5days, 30days
+        const intervals = [0, 1, 10, 1440, 7200, 43200];
+        p.nextReview = Date.now() + (intervals[p.level] * 60 * 1000);
+        
+        progress[currentCard.id] = p;
+        localStorage.setItem('bio_prog', JSON.stringify(progress));
+
+        // Refresh for next card
+        document.getElementById('answer-area').style.display = 'none';
+        document.getElementById('show-btn').style.display = 'block';
+        getNextCard();
+    }
+
+    getNextCard();
 </script>
 
 </body>
